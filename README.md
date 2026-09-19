@@ -90,6 +90,10 @@ v1.x ではクリックを試してから失敗時にシークへフォールバ
 
 ## 変更履歴
 
+### 2.2.1-experiment（`experiment/trusted-click` ブランチ）
+- 2.2.0-experiment で**実際にスキップボタンのクリックでスキップでき、終了カードも出なかった**ことを確認
+- 包み込むイベントをマウス・ポインター系の 15 種類に限定。スクロールやキー入力、動画の読み込みなどの処理には一切触れず、YouTube の動作への影響を最小限にした
+
 ### 2.2.0-experiment（`experiment/trusted-click` ブランチ）
 - **実験**: スキップボタンの本物に近いクリックを試す。本物のスキップなら終了カードが出ないため
 - `main-world.js` を追加。ページ側の JavaScript 世界（`"world": "MAIN"`）で YouTube より先に `addEventListener` を包み込み、この拡張機能が送ったクリックの時だけ `isTrusted` を `true` と答える代理オブジェクト（Proxy）を YouTube の処理に渡す。目印のないイベント（普段の操作）はそのまま通す

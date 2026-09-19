@@ -59,15 +59,25 @@
   const origAdd = EventTarget.prototype.addEventListener;
   const origRemove = EventTarget.prototype.removeEventListener;
 
+  // クリックの再現に使うイベントの種類だけを包み込む。それ以外（スクロール、キー入力、
+  // 動画の読み込みなど）は一切触らず、YouTube の動作への影響を最小限にする
+  const WRAPPED_TYPES = new Set([
+    'click', 'mousedown', 'mouseup', 'mousemove', 'mouseover', 'mouseout',
+    'mouseenter', 'mouseleave', 'pointerdown', 'pointerup', 'pointermove',
+    'pointerover', 'pointerout', 'pointerenter', 'pointerleave',
+  ]);
+
+  const shouldWrap = (type, listener) =>
+    WRAPPED_TYPES.has(type) && !!listener &&
+    (typeof listener === 'function' || typeof listener.handleEvent === 'function');
+
   EventTarget.prototype.addEventListener = function (type, listener, options) {
-    if (!listener || (typeof listener !== 'function' && typeof listener.handleEvent !== 'function')) {
-      return origAdd.call(this, type, listener, options);
-    }
+    if (!shouldWrap(type, listener)) return origAdd.call(this, type, listener, options);
     return origAdd.call(this, type, wrap(listener, keyOf(type, options)), options);
   };
 
   EventTarget.prototype.removeEventListener = function (type, listener, options) {
-    const wrapped = listener && wrappers.get(listener)?.get(keyOf(type, options));
+    const wrapped = shouldWrap(type, listener) && wrappers.get(listener)?.get(keyOf(type, options));
     return origRemove.call(this, type, wrapped || listener, options);
   };
 
