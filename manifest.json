@@ -1,19 +1,38 @@
 {
   "manifest_version": 3,
   "name": "YouTube Ad Skipper",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "YouTubeのスキップ可能な広告を、スキップボタン出現から0.5〜1.0秒のランダムな間を置いて自動でスキップします。",
-  "permissions": ["storage"],
+  "permissions": [
+    "storage"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "YouTube Ad Skipper"
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*"
+      ],
+      "js": [
+        "main-world.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true
     }
-  ]
+  ],
+  "version_name": "2.2.0-experiment"
 }

@@ -174,11 +174,30 @@
     }
 
     const delay = randomDelay();
-    console.log(`${LOG} スキップ可能になりました。${Math.round(delay)}ms 後にスキップします`);
+    console.log(`${LOG} スキップ可能になりました。${Math.round(delay)}ms 後にクリックします`);
 
     setTimeout(() => {
       if (!enabled || !isAdShowing() || isInterstitialShowing()) return;
-      seekWhenReady();
+      if (!isReady(btn)) {
+        seekWhenReady();
+        return;
+      }
+
+      // 【実験】クリックはページ側の世界（main-world.js）に依頼する。
+      // 対象は DOM の属性で伝える（DOM は両方の世界で共有されている）
+      btn.setAttribute('data-adskip-target', '');
+      document.dispatchEvent(new CustomEvent('adskip:click'));
+
+      // 本物のスキップなら広告が終わるか、ボタンが消えて次へ進む
+      setTimeout(() => {
+        const skipped = !isAdShowing() || (!isVisible(btn) && !isInterstitialShowing());
+        if (skipped) {
+          console.log(`${LOG} [実験] クリックでスキップできました`);
+          return;
+        }
+        console.log(`${LOG} [実験] クリックが効かなかったためシークします`);
+        seekWhenReady();
+      }, 1000);
     }, delay);
   };
 
@@ -215,7 +234,7 @@
   // 監視漏れの保険として定期スキャン
   setInterval(scan, 500);
   scan();
-  console.log(`${LOG} v${chrome.runtime.getManifest().version} 起動しました (${location.href})`);
+  console.log(`${LOG} v${chrome.runtime.getManifest().version_name || chrome.runtime.getManifest().version} 起動しました (${location.href})`);
 
   // ポップアップの ON/OFF 設定を反映
   chrome.storage?.sync.get({ enabled: true }, (v) => {
