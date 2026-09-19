@@ -66,6 +66,15 @@
     return !!player && player.classList.contains('ad-showing');
   };
 
+  // 広告が最後まで再生された扱いになると、広告主の終了カード（ビデオ インタースティシャル）が
+  // 円形タイマー付きで数秒表示される。シークは「最後まで見た」扱いになるため、一部の広告では
+  // シーク後にこれが出る。タイマーはページ内部の JS 時計で管理されており外からは終わらせられず、
+  // この間は video も空なのでシークもできない。待つしかない
+  const isInterstitialShowing = () => {
+    const el = document.querySelector('.ytp-video-interstitial-buttoned-centered-layout');
+    return !!el && isVisible(el);
+  };
+
   // ページ内には空の video 要素が複数存在しうるため、実際に再生中のものを選ぶ
   const getActiveVideo = () => {
     const videos = [...document.querySelectorAll('video')];
@@ -76,27 +85,58 @@
       null;
   };
 
-  const describeVideos = () =>
-    [...document.querySelectorAll('video')].map((v, i) =>
-      `#${i} class=${v.className || '(なし)'} readyState=${v.readyState} ` +
-      `duration=${v.duration} currentTime=${v.currentTime.toFixed(1)}`);
+  // ISO 8601 の期間表記（例: PT14M22S）を秒に変換する
+  const parseIsoDuration = (text) => {
+    const m = /^P(?:\d+D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/.exec(text || '');
+    if (!m) return null;
+    const sec = (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+    return sec > 0 ? sec : null;
+  };
 
-  // 広告動画の再生位置を末尾に飛ばす。スキップボタンを押した場合と同じ結果になる
+  // 本編の長さ（秒）をページのメタデータから取得する。取れなければ null。
+  // YouTube は画面遷移してもページを読み直さないため、今の動画のものか video-id で照合する
+  const getContentDuration = () => {
+    const currentId = new URLSearchParams(location.search).get('v');
+    const flexy = document.querySelector('ytd-watch-flexy');
+    if (!currentId || !flexy || flexy.getAttribute('video-id') !== currentId) return null;
+
+    const meta = flexy.querySelector('meta[itemprop="duration"]');
+    const fromMeta = parseIsoDuration(meta?.getAttribute('content'));
+    if (fromMeta) return fromMeta;
+
+    for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
+      try {
+        const data = JSON.parse(script.textContent);
+        const url = `${data.embedUrl || ''} ${data.url || ''}`;
+        if (url.includes(currentId)) return parseIsoDuration(data.duration);
+      } catch (_) { /* 関係ない JSON-LD は無視 */ }
+    }
+    return null;
+  };
+
+  // 本編の長さが分からない時に「本編かもしれない」とみなす長さ（秒）。
+  // 取り違えて本編を飛ばすより、長い広告をスキップし損ねる方がましなので保守的にする
+  const UNKNOWN_CONTENT_LIMIT_SEC = 600;
+
+  // シーク対象が本編でないかを確かめる。広告が終わった後も .ad-showing が残ったまま
+  // video 要素に本編が読み込まれることがあり、それをシークすると本編の末尾に飛んでしまう
+  const looksLikeContent = (video) => {
+    const content = getContentDuration();
+    if (content) return Math.abs(video.duration - content) < 2;
+    return video.duration > UNKNOWN_CONTENT_LIMIT_SEC;
+  };
+
+  // 広告動画の再生位置を末尾に飛ばす。成功またはこれ以上試す意味がない時に true を返す
   const seekAdToEnd = () => {
-    if (!isAdShowing()) {
-      console.debug(`${LOG} シーク不可: 広告再生中ではありません`);
-      return false;
-    }
+    if (!isAdShowing()) return true;
     const video = getActiveVideo();
-    if (!video) {
-      console.debug(`${LOG} シーク待機: 再生中のvideo要素が見つかりません`, describeVideos());
+    if (!video || !isFinite(video.duration) || video.duration <= 0) {
+      console.debug(`${LOG} シーク待機: 広告のメディアが未読み込み`);
       return false;
     }
-    if (!isFinite(video.duration) || video.duration <= 0) {
-      console.debug(
-        `${LOG} シーク待機: duration=${video.duration} currentTime=${video.currentTime}`,
-        describeVideos());
-      return false;
+    if (looksLikeContent(video)) {
+      console.log(`${LOG} シーク中止: 本編の可能性があります (duration=${video.duration.toFixed(1)}s)`);
+      return true;
     }
     video.currentTime = Math.max(video.duration - 0.1, 0);
     video.play?.().catch(() => {});
@@ -111,7 +151,6 @@
     const MAX_ATTEMPTS = 12; // 500ms x 12 = 最大6秒待つ
     if (seekRetryTimer) return;
     if (seekAdToEnd()) return;
-    if (!isAdShowing()) return;
 
     if (attempt >= MAX_ATTEMPTS) {
       console.log(`${LOG} 広告のメディアが読み込まれずスキップできませんでした`);
@@ -129,14 +168,16 @@
     if (pending.has(btn)) return;
     pending.add(btn);
 
+    if (isInterstitialShowing()) {
+      console.log(`${LOG} 広告の終了カードが表示されています（タイマー終了まで待機）`);
+      return;
+    }
+
     const delay = randomDelay();
     console.log(`${LOG} スキップ可能になりました。${Math.round(delay)}ms 後にスキップします`);
 
     setTimeout(() => {
-      if (!enabled || !isAdShowing()) {
-        console.debug(`${LOG} 広告が終了していたためスキップを中止`);
-        return;
-      }
+      if (!enabled || !isAdShowing() || isInterstitialShowing()) return;
       seekWhenReady();
     }, delay);
   };
