@@ -183,19 +183,19 @@
         return;
       }
 
-      // 【実験】クリックはページ側の世界（main-world.js）に依頼する。
+      // クリックはページ側の世界（main-world.js）に依頼する。
       // 対象は DOM の属性で伝える（DOM は両方の世界で共有されている）
       btn.setAttribute('data-adskip-target', '');
       document.dispatchEvent(new CustomEvent('adskip:click'));
 
-      // 本物のスキップなら広告が終わるか、ボタンが消えて次へ進む
+      // クリックが通れば広告が終わるか、ボタンが消えて次へ進む
       setTimeout(() => {
         const skipped = !isAdShowing() || (!isVisible(btn) && !isInterstitialShowing());
         if (skipped) {
-          console.log(`${LOG} [実験] クリックでスキップできました`);
+          console.log(`${LOG} クリックでスキップしました`);
           return;
         }
-        console.log(`${LOG} [実験] クリックが効かなかったためシークします`);
+        console.log(`${LOG} クリックが効かなかったためシークします`);
         seekWhenReady();
       }, 1000);
     }, delay);

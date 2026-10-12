@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Ad Skipper",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "YouTubeのスキップ可能な広告を、スキップボタン出現から0.5〜1.0秒のランダムな間を置いて自動でスキップします。",
   "permissions": [
     "storage"
@@ -33,6 +33,5 @@
       "run_at": "document_idle",
       "all_frames": true
     }
-  ],
-  "version_name": "2.2.1-experiment"
+  ]
 }

@@ -1,4 +1,4 @@
-// 【実験】ページ側の JavaScript 世界（MAIN world）で動くスクリプト。
+// ページ側の JavaScript 世界（MAIN world）で動くスクリプト。
 //
 // JavaScript から作ったイベントは isTrusted が false になり、YouTube のスキップボタンは
 // それを無視する。isTrusted はイベント自体には書き込めないが、YouTube の処理が受け取る
