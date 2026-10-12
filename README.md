@@ -1,5 +1,6 @@
 # YouTube Ad Skipper
-<img width="565" height="297" alt="{36F4F0ED-6066-42EC-B672-C913D546E143}" src="https://github.com/user-attachments/assets/f647afdb-622b-4ac0-b6b2-461d578528e7" />
+<img width="320" height="132" alt="image" src="https://github.com/user-attachments/assets/136a5fa7-ce2a-45c9-bd4d-27fefaf7e985" />
+
 
 YouTube の**スキップ可能な広告**を、スキップボタンが出現してから **0.5〜1.0 秒のランダムな間**を置いて自動でスキップする Chrome 拡張機能。
 
